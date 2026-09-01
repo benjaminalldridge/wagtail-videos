@@ -55,6 +55,22 @@
             .filter((palette) => palette.values.length > 0);
     }
 
+    function nodeAffectsVideoPalettes(node) {
+        // Text nodes cannot contain chooser state or StreamField deletion state
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+        }
+
+        const selector = "[data-video-palette-source], [data-streamfield-child]";
+        // A chooser update changes a descendant; a StreamField update can add or
+        // remove an entire child block containing a chooser
+        return Boolean(
+            node.matches(selector)
+            || node.closest(selector)
+            || node.querySelector(selector),
+        );
+    }
+
     function renderSwatches(video, values, group) {
         // Keep one active row per video while its palette select changes.
         const existing = video.querySelector(
@@ -198,10 +214,23 @@
         }, true);
 
         // Wagtail's formset event can fire before its DOM removal is complete.
-        // Watch external mutations so stale video palette sections disappear.
+        // Watch only chooser and StreamField mutations so unrelated admin UI changes
+        // do not rebuild this field and reset its palette dropdowns to Sampled
         const observer = new MutationObserver((mutations) => {
-            if (mutations.some((mutation) => !root.contains(mutation.target))) {
-                // Ignore this widget's own DOM work but react to external chooser/formset changes.
+            if (mutations.some((mutation) => {
+                if (root.contains(mutation.target)) {
+                    // The widget's own swatch rendering does not affect source palettes
+                    return false;
+                }
+
+                if (nodeAffectsVideoPalettes(mutation.target)) {
+                    return true;
+                }
+
+                return Array.from(mutation.addedNodes).some(nodeAffectsVideoPalettes)
+                    || Array.from(mutation.removedNodes).some(nodeAffectsVideoPalettes);
+            })) {
+                // Re-read source data after a chooser or StreamField state transition
                 scheduleRender();
             }
         });

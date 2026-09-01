@@ -19,6 +19,7 @@ setup(
     install_requires=[
         "wagtail>=6.3",
         "Django>=4.2",
+        "Pillow>=9.1.0",
         "bcp47==0.0.4",
     ],
     zip_safe=False,

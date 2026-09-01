@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 from tests.utils import create_test_video_file
-from wagtailvideos.widgets import AdminVideoChooser
+from wagtailvideos.widgets import AdminVideoChooser, get_chooser_colour_data
 
 
 class VideoChooserWidgetTests(TestCase):
@@ -34,3 +34,22 @@ class VideoChooserWidgetTests(TestCase):
         self.assertIn('data-colour="#336699"', html)
         self.assertIn('data-palette-group="Complement"', html)
         self.assertIn('data-colour="#996633"', html)
+
+    def test_ignores_incomplete_persisted_palette_records(self):
+        """Historic JSON without harmonies must not prevent a chooser rendering."""
+        video = AdminVideoChooser().model.objects.create(
+            title="Legacy palette video",
+            file=create_test_video_file(),
+        )
+        video.dominant_colours = [
+            {"hex": "#336699"},
+            "not a colour record",
+        ]
+
+        palette = get_chooser_colour_data(video)
+
+        self.assertEqual(palette["sampled"], [{"hex": "#336699"}])
+        self.assertEqual(
+            palette["harmonies"],
+            {"analogous": [], "complement": [], "triad": []},
+        )

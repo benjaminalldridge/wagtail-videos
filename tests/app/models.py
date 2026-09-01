@@ -69,7 +69,7 @@ class TestPage(Page):
         validators=[
             RegexValidator(
                 r"^#[0-9a-fA-F]{6}$",
-                message="Use a valid six-digit hexadecimal colour, for example #abc123.",
+                message="Use a six-digit hexadecimal colour, for example #abc123.",
             )
         ],
     )

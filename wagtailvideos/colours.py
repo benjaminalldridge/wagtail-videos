@@ -1,7 +1,7 @@
 """Extract and persist a colour swatch palette for a given video.
 
-Use known colour science conversions to translate a source video's thumbnail into a 
-usable set of RGB values, translations into other colour models (eg. HSV), and a list 
+Use known colour science conversions to translate a source video's thumbnail into a
+usable set of RGB values, translations into other colour models (eg. HSV), and a list
 of hue harmonies based on different visual models (eg. Analogous or Complementary).
 """
 
@@ -10,14 +10,13 @@ from PIL import Image, UnidentifiedImageError
 
 # Provide 3 return swatches after excluding unusable dark and light values
 DEFAULT_COUNT = 3
-CANDIDATE_COUNT = 24 # Ensure enough swatches for quantization
-MIN_USABLE_LUMA = 0.30 # Ensure the swatch is not too dark
-MAX_USABLE_LUMA = 0.95 # Ensure the watch is not too light
+CANDIDATE_COUNT = 24  # Ensure enough swatches for quantization
+MAX_COUNT = 32  # Pillow quantization accepts at most 256 palette candidates
+MIN_USABLE_LUMA = 0.30  # Ensure the swatch is not too dark
+MAX_USABLE_LUMA = 0.95  # Ensure the swatch is not too light
 
 
-# Conventional HSV hue rotations, aligned with source swatch index 0, 1, and 2. 
-# The coefficients used are standard Rec.709 relative-luminance values: 
-# https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+# Conventional HSV hue rotations, aligned with source swatch index 0, 1, and 2
 HARMONY_ROTATIONS = {
     "analogous": (-30, 0, 30),
     "complement": (180, 180, 180),
@@ -57,6 +56,8 @@ def _rgb_to_hsv(rgb):
 
 def _rgb_to_luma(rgb):
     """Return normalised RGB values (0..1) using Rec.709 conversion factors."""
+    # WCAG documents the Rec.709 coefficients used for relative luminance
+    # https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
     red, green, blue = (channel / 255 for channel in rgb)
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
@@ -129,7 +130,7 @@ def _get_candidates(image, count):
     palette = quantized.getpalette()
     colour_counts = quantized.getcolors()
 
-    candidates = [] # The candidates are offered to the application, then validated
+    candidates = []  # The candidates are offered to the application, then validated
     for pixel_count, palette_index in colour_counts:
         # Pillow stores RGB swatch palette entries consecutively, using three values per colour
         offset = palette_index * 3
@@ -164,8 +165,19 @@ def extract_from_file(image_file, count=DEFAULT_COUNT):
         # Close the file handle after we are done
         image_file.close()
 
+
+def _validate_count(count):
+    """Reject palette sizes that cannot produce a predictable end result."""
+    if isinstance(count, bool) or not isinstance(count, int):
+        raise ValueError("The colour count must be an integer")
+
+    if not 1 <= count <= MAX_COUNT:
+        raise ValueError("The colour count must be between 1 and {0}".format(MAX_COUNT))
+
+
 def extract_from_image(image, count=DEFAULT_COUNT):
     """Extract palette records from exactly one image."""
+    _validate_count(count)
     image = prepare_image(image)
 
     # Get a list of candidate swatch palettes we can operate on
@@ -185,5 +197,5 @@ def extract_from_image(image, count=DEFAULT_COUNT):
         for candidate in candidates[:count]
     ]
 
-    # Add the our harmony data in after the fact because this is dependent on the rest succeeding
+    # Attach harmony values only after the source palette has been built successfully
     return _add_harmonies(colours)

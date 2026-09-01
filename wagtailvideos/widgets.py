@@ -3,7 +3,6 @@
 import json
 
 from django import forms
-from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from wagtail.admin.staticfiles import versioned_static
@@ -18,26 +17,39 @@ from wagtailvideos import get_video_model
 
 
 def get_chooser_colour_data(video):
-    """Return the compact palette shape consumed by chooser JavaScript.
+    """Return the correct swatch palette shape consumed by the JS side.
 
-    The model stores harmonies beside each source colour. The client renders
-    rows, so this function transposes that storage shape into one list per row.
+    The model encodes harmonies beside each source colour, then the client renders
+    those rows, so this function transposes that storage shape into one list per row.
     """
     # Limit old or manually edited JSON to the three positions the UI supports.
-    colours = list(video.dominant_colours or [])[:3]
+    # We ignore invalid entires so a partial/historic value can't break editing
+    colours = [
+        colour
+        for colour in (video.dominant_colours or [])[:3]
+        if isinstance(colour, dict)
+    ]
+    harmonies = {name: [] for name in ("analogous", "complement", "triad")}
 
-    # Transpose per-source harmonies into the row-oriented shape used by widgets.
+    for colour in colours:
+        # Old palette payloads may predate harmony support or be manually edited
+        colour_harmonies = colour.get("harmonies", {})
+        if not isinstance(colour_harmonies, dict):
+            continue
+
+        for name in harmonies:
+            harmony = colour_harmonies.get(name)
+            if isinstance(harmony, dict):
+                harmonies[name].append(harmony)
+
+    # Transpose per-source harmonies into the row-oriented shape used by widgets
     return {
         "sampled": colours,
-        "harmonies": {
-            "analogous": [colour["harmonies"]["analogous"] for colour in colours],
-            "complement": [colour["harmonies"]["complement"] for colour in colours],
-            "triad": [colour["harmonies"]["triad"] for colour in colours],
-        },
+        "harmonies": harmonies,
     }
 
 class AdminVideoChooser(BaseChooser):
-    """A video chooser that carries preview and persisted palette data."""
+    """A video chooser that carries preview as well as persisted palette data."""
 
     choose_one_text = _('Choose a video')
     template_name = "wagtailvideos/widgets/video_chooser.html"
@@ -60,15 +72,10 @@ class AdminVideoChooser(BaseChooser):
         }
         # Carry persisted colour values through both ordinary fields and StreamField state
         data["dominant_colours"] = get_chooser_colour_data(instance)
-        # If needed, the client can request another extraction for this video
-        data["extract_colours_url"] = reverse(
-            "wagtailvideos:extract_dominant_colours_response",
-            args=(instance.pk,),
-        )
         return data
 
     def get_context(self, name, value_data, attrs):
-        """Return empty palette rows when the chooser has no selected video."""
+        """Return empty swatch palette rows when the chooser has no selected video."""
         context = super().get_context(name, value_data, attrs)
         # Preserve the base chooser's context while adding video-specific state onto it
         context["preview"] = value_data.get("preview", {})
@@ -84,7 +91,6 @@ class AdminVideoChooser(BaseChooser):
                 },
             },
         )
-        context["extract_colours_url"] = value_data.get("extract_colours_url", "")
         return context
 
     def render_js_init(self, id_, name, value_data):

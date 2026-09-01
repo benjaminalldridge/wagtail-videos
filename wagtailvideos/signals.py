@@ -66,13 +66,34 @@ def _extract_dominant_colours(video):
         )
 
 
+def _source_file_changed(video, created):
+    """Return whether this save introduces a video source needing new metadata."""
+    if created:
+        # New model rows have no previous source from which metadata could be reused
+        return True
+
+    # Names remain stable across Django's FieldFile wrappers during form saves
+    return video._initial_file_name != video.file.name
+
+
+def _thumbnail_changed(video, created):
+    """Return whether this save introduces a thumbnail needing a new palette."""
+    if created:
+        # A supplied thumbnail on a new record is the first usable palette source
+        return bool(video.thumbnail)
+
+    # A manual thumbnail assignment must refresh palette data even when the video
+    # source itself has not changed
+    return video._initial_thumbnail_name != video.thumbnail.name
+
+
 def video_post_save(instance, created, **kwargs):
     """Complete metadata and palette generation after a video file is saved.
 
     All Wagtail upload surfaces save the video model, so this receiver provides
-    one lifecycle hook for ordinary, chooser, and multiple uploads. Palette
-    extraction occurs only at creation; later model saves must not unexpectedly
-    replace an editor's deliberately refreshed palette.
+    one lifecycle hook for ordinary, chooser, and multiple uploads. A replaced
+    source file invalidates all derived values, while ordinary later saves leave
+    an editor's deliberately refreshed palette untouched.
     """
     # The guarded save below emits ``post_save`` again; never restart this work.
     if hasattr(instance, "_from_signal"):
@@ -88,6 +109,8 @@ def video_post_save(instance, created, **kwargs):
         return
 
     backend = get_transcoder_backend()
+    source_changed = _source_file_changed(instance, created)
+    thumbnail_changed = _thumbnail_changed(instance, created)
 
     # The transcoder creates the default thumbnail. A manually supplied
     # thumbnail still works when the optional backend is not installed.
@@ -97,12 +120,31 @@ def video_post_save(instance, created, **kwargs):
         if backend.installed():
             # Generate the default thumbnail before sampling colours from it.
             backend.update_video_metadata(instance)
+        elif source_changed and not thumbnail_changed:
+            # An old generated thumbnail describes the replaced source, not this one
+            # Clear it so neither the admin preview nor palette can use stale metadata
+            instance.thumbnail = None
+
+        # A palette from the previous source must never remain selectable
+        palette_source_changed = thumbnail_changed or (
+            source_changed and backend.installed()
+        )
+        if source_changed or palette_source_changed:
+            instance.dominant_colours = []
 
         # The source file size is independent of optional transcoder availability.
         instance.file_size = instance.file.size
-        if created:
-            # Initial uploads receive a palette without overwriting later editor refreshes.
+        if palette_source_changed and instance.thumbnail:
+            # Sample only a thumbnail generated for the new source or deliberately
+            # supplied by an editor; an unavailable thumbnail leaves the palette empty
             _extract_dominant_colours(instance)
+
+        # Mark derived state handled before the guarded save and the edit view's
+        # historical second save run the receiver again
+        instance._initial_file = instance.file
+        instance._initial_thumbnail = instance.thumbnail
+        instance._initial_file_name = instance.file.name
+        instance._initial_thumbnail_name = instance.thumbnail.name
         # Persist thumbnail metadata, source size, and any successful palette together.
         instance.save()
     finally:

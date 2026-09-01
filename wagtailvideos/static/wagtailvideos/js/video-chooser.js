@@ -23,7 +23,7 @@ class VideoChooser extends window.ImageChooser {
         );
     }
 
-    // Render the sampled swatches for a chosen video
+    // Render all persisted palette groups for a chosen video
     renderPaletteSource(palette) {
         // Keep this generated DOM shape identical to video_chooser.html so
         // page-level controls can use initial and dynamically selected videos

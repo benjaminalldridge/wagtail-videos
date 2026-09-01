@@ -32,11 +32,6 @@ class VideoChosenResponseMixin(ChosenResponseMixin):
         }
         # Pass back the persisted palette data so selecting a video doesn't need to reload
         response_data["dominant_colours"] = get_chooser_colour_data(video)
-        # Keep the extraction endpoint attached directly to the chosen video identity
-        response_data["extract_colours_url"] = reverse(
-            "wagtailvideos:extract_dominant_colours_response",
-            args=(video.pk,),
-        )
         return response_data
 
 
@@ -164,7 +159,6 @@ class VideoChooserViewSet(ChooserViewSet):
     choose_results_view_class = VideoChooseResultsView
     chosen_view_class = VideoChosenView
     create_view_class = VideoUploadView
-    permission_policy = permission_policy
     register_widget = False
 
     icon = "media"

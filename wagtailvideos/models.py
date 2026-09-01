@@ -89,7 +89,13 @@ class AbstractVideo(CollectionMember, index.Indexed, models.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # The ffmpeg backend compares these field instances after form assignment
         self._initial_file = self.file
+        self._initial_thumbnail = self.thumbnail
+        # Signals compare names instead because Django can re-wrap FieldFile objects
+        # between form.save() and the edit view's historical second save()
+        self._initial_file_name = self.file.name
+        self._initial_thumbnail_name = self.thumbnail.name
 
     def get_file_size(self):
         if self.file_size is None:

@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from PIL import Image
 
-from wagtailvideos.colours import extract_from_image
+from wagtailvideos.colours import MAX_COUNT, extract_from_image
 
 
 class DominantColourExtractionTests(TestCase):
@@ -27,3 +27,13 @@ class DominantColourExtractionTests(TestCase):
                 self.assertIsInstance(record, dict)
                 self.assertIn("hex", record)
                 self.assertIn("display", record)
+
+    def test_rejects_unsupported_colour_counts(self):
+        """The public helper rejects invalid Pillow quantization sizes."""
+        image = Image.new("RGB", (1, 1), (110, 129, 128))
+
+        with self.assertRaisesRegex(ValueError, "must be between 1"):
+            extract_from_image(image, count=0)
+
+        with self.assertRaisesRegex(ValueError, "must be between 1"):
+            extract_from_image(image, count=MAX_COUNT + 1)

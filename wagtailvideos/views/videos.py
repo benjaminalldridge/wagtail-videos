@@ -2,7 +2,6 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.http import JsonResponse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 from wagtail.admin import messages
@@ -14,7 +13,6 @@ from wagtail.search.backends import get_search_backends
 from wagtailvideos import get_transcoder_backend, get_video_model
 from wagtailvideos.forms import VideoTranscodeAdminForm, get_video_form
 from wagtailvideos.permissions import permission_policy
-from wagtailvideos.widgets import get_chooser_colour_data
 
 permission_checker = PermissionPolicyChecker(permission_policy)
 
@@ -78,8 +76,8 @@ def edit(request, video_id):
                 # Set new video file size
                 video.file_size = video.file.size
 
+            # ModelForm.save() persists the video and triggers derived metadata once
             video = form.save()
-            video.save()
 
             # Reindex the video to make sure all tags are indexed
             for backend in get_search_backends():
@@ -206,21 +204,3 @@ def extract_dominant_colours(request, video_id):
         messages.success(request, "Input video's dominant colours extracted.")
 
     return redirect("wagtailvideos:edit", video.id)
-
-@require_POST
-@permission_checker.require("change")
-def extract_dominant_colours_response(request, video_id):
-    """Extract a palette and return chooser-ready JSON for in-place updates."""
-    video = get_object_or_404(get_video_model(), id=video_id)
-
-    try:
-        # This endpoint is used by chooser JavaScript rather than a full-page form.
-        video.extract_dominant_colours(count=3)
-    except RuntimeError as error:
-        # JSON lets the chooser render the failure without navigating away.
-        return JsonResponse({"error": str(error)}, status=400)
-
-    # Return the same row-oriented structure used when the chooser first loads.
-    return JsonResponse({
-        "dominant_colours": get_chooser_colour_data(video),
-    })

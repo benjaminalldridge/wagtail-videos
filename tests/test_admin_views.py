@@ -4,11 +4,12 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template.defaultfilters import filesizeformat
 from django.test import TestCase, override_settings
 from django.urls import reverse
-from wagtail.models import Collection, GroupCollectionPermission
+from wagtail.models import Collection, GroupCollectionPermission, UploadedFile
 from wagtail.test.utils import WagtailTestUtils
 
 from tests.utils import create_test_video_file
@@ -332,6 +333,26 @@ class TestVideoEditView(TestCase, WagtailTestUtils):
         video = Video.objects.get(id=self.video.id)
         self.assertNotEqual(video.file_size, 100000)
 
+    @patch.object(Video, "extract_dominant_colours", return_value=[])
+    def test_edit_with_new_video_file_refreshes_dominant_colours(self, extract_colours):
+        """Replacing a source invalidates its old thumbnail palette."""
+        self.video.dominant_colours = [{"hex": "#336699"}]
+        self.video.save(update_fields=["dominant_colours"])
+
+        response = self.post(
+            {
+                "title": "Replacement source",
+                "file": SimpleUploadedFile(
+                    "replacement.mp4",
+                    create_test_video_file().read(),
+                    "video/mp4",
+                ),
+            }
+        )
+
+        self.assertEqual(response.status_code, 200)
+        extract_colours.assert_called_once_with(count=3)
+
     def test_with_missing_video_file(self):
         self.video.file.delete(False)
 
@@ -559,7 +580,7 @@ class TestMultipleVideoUploader(TestCase, WagtailTestUtils):
     """
 
     def setUp(self):
-        self.login()
+        self.user = self.login()
 
         # Create an video for running tests on
         self.video = Video.objects.create(
@@ -613,6 +634,29 @@ class TestMultipleVideoUploader(TestCase, WagtailTestUtils):
         self.assertIn("success", response_json)
         self.assertEqual(response_json["video_id"], response.context["video"].id)
         self.assertTrue(response_json["success"])
+
+    def test_create_from_uploaded_video(self):
+        """A deferred upload uses Wagtail's standard video save path."""
+        upload = UploadedFile.objects.create(
+            file=SimpleUploadedFile(
+                "deferred.mp4", create_test_video_file().read(), "video/mp4"
+            ),
+            uploaded_by_user=self.user,
+            for_content_type=ContentType.objects.get_for_model(Video),
+        )
+
+        response = self.client.post(
+            reverse("wagtailvideos:create_multiple_from_uploaded_image", args=(upload.id,)),
+            {
+                "uploaded-video-{0}-title".format(upload.id): "Deferred video",
+                "uploaded-video-{0}-tags".format(upload.id): "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+        self.assertTrue(Video.objects.filter(title="Deferred video").exists())
+        self.assertFalse(UploadedFile.objects.filter(id=upload.id).exists())
 
     def test_add_post_badfile(self):
         """
