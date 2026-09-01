@@ -5,6 +5,7 @@ CHANGELOG
 -----
 
 - Added chunked upload support for large files
+- Added thumbnail-based dominant-colour extraction with persisted harmony palettes
 
 
 7.2.0

@@ -9,8 +9,9 @@ tracks for subtitles/captions.
 Requirements
 ------------
 
--  Wagtail >= 6.3 (for older wagtail version see the tags)
--  `ffmpeg <https://ffmpeg.org/>`__ (optional, for transcoding)
+-  Wagtail >= 6.3 and Django >= 4.2 (for older Wagtail versions see the tags)
+-  Pillow >= 9.1.0 (installed automatically, for thumbnail and palette processing)
+-  `ffmpeg <https://ffmpeg.org/>`__ (optional, for transcoding and generated thumbnails)
 
 Installing
 ----------
@@ -98,6 +99,26 @@ tag. The original video and all extra transcodes are added as
 
 Jinja2 extensions are also included.
 
+Dominant colours:
+~~~~~~~~~~~~~~~~~
+
+Each video stores a three-colour palette in its non-editable ``dominant_colours``
+field. The extractor reads the video's thumbnail, rather than decoding the video
+file. It quantizes that image, discards values with relative luma below 30% or
+above 95%, and persists the three most prevalent remaining colours together with
+their analogous, complement, and triad values.
+
+The upload lifecycle extracts a palette whenever it receives a new thumbnail. A
+configured transcoding backend normally creates that thumbnail as part of video
+metadata generation. When no backend is installed, add a thumbnail manually to
+make a palette available. A missing or unsuitable thumbnail leaves the video
+usable but does not create a palette.
+
+Editors can rerun extraction from the video edit page with ``Extract colours``.
+The stored values are included in the video chooser data so custom admin widgets
+can expose them as colour choices. The package does not impose page or block
+styling; projects decide how a selected value is stored and rendered.
+
 How to transcode using ffmpeg:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -161,6 +182,16 @@ Custom Video models:
 
 Same as Wagtail Images, a custom model can be used to replace the built in Video model using the
 ``WAGTAILVIDEOS_VIDEO_MODEL`` setting.
+
+``dominant_colours`` is inherited from ``AbstractVideo`` and must not be added to
+``admin_form_fields`` because it is derived metadata. After adding the field to an
+existing custom video model by upgrading, generate and apply the migration for
+the project application.
+
+.. code:: bash
+
+    python manage.py makemigrations videos
+    python manage.py migrate
 
 .. code:: django
 
