@@ -196,10 +196,13 @@ def extract_dominant_colours(request, video_id):
     video = get_object_or_404(get_video_model(), id=video_id)
 
     try:
+        # The model owns persistence so every caller receives the same JSON contract.
         video.extract_dominant_colours(count=3)
     except RuntimeError as error:
+        # Expected thumbnail failures should be visible to the editor, not a 500 error.
         messages.error(request, str(error))
     else:
+        # Confirm that the currently displayed palette has been replaced.
         messages.success(request, "Input video's dominant colours extracted.")
 
     return redirect("wagtailvideos:edit", video.id)
@@ -211,10 +214,13 @@ def extract_dominant_colours_response(request, video_id):
     video = get_object_or_404(get_video_model(), id=video_id)
 
     try:
+        # This endpoint is used by chooser JavaScript rather than a full-page form.
         video.extract_dominant_colours(count=3)
     except RuntimeError as error:
+        # JSON lets the chooser render the failure without navigating away.
         return JsonResponse({"error": str(error)}, status=400)
 
+    # Return the same row-oriented structure used when the chooser first loads.
     return JsonResponse({
         "dominant_colours": get_chooser_colour_data(video),
     })

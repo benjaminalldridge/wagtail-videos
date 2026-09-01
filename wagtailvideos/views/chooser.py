@@ -24,12 +24,15 @@ class VideoChosenResponseMixin(ChosenResponseMixin):
     def get_chosen_response_data(self, video):
         """Send enough state for a newly selected video to render its palette."""
         response_data = super().get_chosen_response_data(video)
+        # Match the dimensions used by the chooser template's preview
         response_data["preview"] = {
             "url": video.thumbnail.url if video.thumbnail else "",
             "width": 165,
             "height": 165,
         }
+        # Pass back the persisted palette data so selecting a video doesn't need to reload
         response_data["dominant_colours"] = get_chooser_colour_data(video)
+        # Keep the extraction endpoint attached directly to the chosen video identity
         response_data["extract_colours_url"] = reverse(
             "wagtailvideos:extract_dominant_colours_response",
             args=(video.pk,),

@@ -61,15 +61,15 @@ class TestPage(Page):
         [("video", VideoChooserBlock())], blank=True, use_json_field=True
     )
 
-    # A page owns its applied background value. Video palettes remain derived
-    # metadata, so changing a video later does not silently restyle a page.
+    # A page owns its applied background colour value. Video palettes are derived metadata,
+    # so changing a video later does not silently restyle a page unless asked.
     page_background_colour = models.CharField(
         blank=True,
         max_length=7,
         validators=[
             RegexValidator(
                 r"^#[0-9a-fA-F]{6}$",
-                message="Use a six-digit hexadecimal colour, for example #abc123.",
+                message="Use a valid six-digit hexadecimal colour, for example #abc123.",
             )
         ],
     )
@@ -77,5 +77,5 @@ class TestPage(Page):
     content_panels = Page.content_panels + [
         VideoChooserPanel("video_field"),
         FieldPanel("video_streamfield"),
-        FieldPanel("page_background_colour", widget=PageBackgroundColourWidget),
+        FieldPanel("page_background_colour", widget=PageBackgroundColourWidget), # Register the actual panel
     ]

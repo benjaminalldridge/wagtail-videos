@@ -67,9 +67,7 @@ class AbstractVideo(CollectionMember, index.Indexed, models.Model):
     width = models.IntegerField(verbose_name=_("width"), editable=False, null=True)
     height = models.IntegerField(verbose_name=_("height"), editable=False, null=True)
 
-    # Derived thumbnail metadata, not editor-entered video data. Keeping it out
-    # of ``admin_form_fields`` is required because non-editable model fields
-    # cannot be represented in a generated Django model form.
+    # Derived thumbnail metadata, stored here so as to not break admin editable fields 
     dominant_colours = models.JSONField(
         default=list,
         blank=True,
@@ -232,13 +230,16 @@ class AbstractVideo(CollectionMember, index.Indexed, models.Model):
     def extract_dominant_colours(self, count=3):
         """Extract, persist, and return this video's thumbnail palette.
 
-        The import remains local so the base video model does not import Pillow
-        and palette helpers until an extraction is explicitly requested.
+        Importing is local so the base video model does not import Pillow
+        or palette helpers until an extraction is explicitly requested.
         """
+        # Delay the optional processing import until this method is called
         from wagtailvideos.colours import extract
 
         colours = extract(self, count=count)
+        # Keep one stable JSON value on the video for admin/chooser consumers
         self.dominant_colours = colours
+        # We only need to persist the derived palette data
         self.save(update_fields=["dominant_colours"])
         return colours
 

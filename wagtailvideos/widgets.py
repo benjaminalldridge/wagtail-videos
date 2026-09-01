@@ -23,8 +23,10 @@ def get_chooser_colour_data(video):
     The model stores harmonies beside each source colour. The client renders
     rows, so this function transposes that storage shape into one list per row.
     """
+    # Limit old or manually edited JSON to the three positions the UI supports.
     colours = list(video.dominant_colours or [])[:3]
 
+    # Transpose per-source harmonies into the row-oriented shape used by widgets.
     return {
         "sampled": colours,
         "harmonies": {
@@ -48,14 +50,17 @@ class AdminVideoChooser(BaseChooser):
         self.model = get_video_model()
 
     def get_value_data_from_instance(self, instance):
-        """Add video-specific preview and palette values to chooser state."""
+        """Add video-specific preview and swatch palette values to the chooser state."""
         data = super().get_value_data_from_instance(instance)
+        # We need to use generated thumbnail because it is the logical extraction source
         data["preview"] = {
             "url": instance.thumbnail.url if instance.thumbnail else "",
             "width": 165,
             "height": 165,
         }
+        # Carry persisted colour values through both ordinary fields and StreamField state
         data["dominant_colours"] = get_chooser_colour_data(instance)
+        # If needed, the client can request another extraction for this video
         data["extract_colours_url"] = reverse(
             "wagtailvideos:extract_dominant_colours_response",
             args=(instance.pk,),
@@ -63,9 +68,11 @@ class AdminVideoChooser(BaseChooser):
         return data
 
     def get_context(self, name, value_data, attrs):
-        """Provide empty palette rows when the chooser has no selected video."""
+        """Return empty palette rows when the chooser has no selected video."""
         context = super().get_context(name, value_data, attrs)
+        # Preserve the base chooser's context while adding video-specific state onto it
         context["preview"] = value_data.get("preview", {})
+        # If we haven't run an extraction, the context must remain safe
         context["dominant_colours"] = value_data.get(
             "dominant_colours",
             {
@@ -81,12 +88,14 @@ class AdminVideoChooser(BaseChooser):
         return context
 
     def render_js_init(self, id_, name, value_data):
-        """Construct the video-specific chooser subclass for legacy widgets."""
+        """Build out the video-specific chooser subclass for legacy widgets."""
+        # Wagtail expects a JavaScript source here, not a callable Python object
         return "new VideoChooser({0});".format(json.dumps(id_))
 
     @property
     def media(self):
         """Load the image chooser base class before the video extension."""
+        # `VideoChooser` subclasses Wagtail's image chooser in the browser
         return forms.Media(
             js=[
                 versioned_static("wagtailimages/js/image-chooser-modal.js"),
