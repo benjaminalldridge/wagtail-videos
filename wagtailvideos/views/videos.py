@@ -2,6 +2,7 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.http import JsonResponse
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 from wagtail.admin import messages
@@ -13,6 +14,7 @@ from wagtail.search.backends import get_search_backends
 from wagtailvideos import get_transcoder_backend, get_video_model
 from wagtailvideos.forms import VideoTranscodeAdminForm, get_video_form
 from wagtailvideos.permissions import permission_policy
+from wagtailvideos.widgets import get_chooser_colour_data
 
 permission_checker = PermissionPolicyChecker(permission_policy)
 
@@ -123,7 +125,6 @@ def create_transcode(request, video_id):
         transcode_form.save()
     return redirect('wagtailvideos:edit', video_id)
 
-
 @permission_checker.require('delete')
 def delete_transcode(request, video_id, transcode_id):
     video = get_object_or_404(get_video_model(), id=video_id)
@@ -186,4 +187,34 @@ def usage(request, video_id):
     return render(request, "wagtailvideos/videos/usage.html", {
         'video': video,
         'used_by': page
+    })
+
+@require_POST
+@permission_checker.require("change")
+def extract_dominant_colours(request, video_id):
+    """Run an extraction to find the dominant colours in a video."""
+    video = get_object_or_404(get_video_model(), id=video_id)
+
+    try:
+        video.extract_dominant_colours(count=3)
+    except RuntimeError as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, "Input video's dominant colours extracted.")
+
+    return redirect("wagtailvideos:edit", video.id)
+
+@require_POST
+@permission_checker.require("change")
+def extract_dominant_colours_response(request, video_id):
+    """Get the response for a dominant colour extraction"""
+    video = get_object_or_404(get_video_model(), id=video_id)
+
+    try:
+        video.extract_dominant_colours(count=3)
+    except RuntimeError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+
+    return JsonResponse({
+        "dominant_colours": get_chooser_colour_data(video),
     })

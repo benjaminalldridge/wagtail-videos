@@ -26,6 +26,16 @@ urlpatterns = [
         name="delete_upload_multiple",
     ),
 
+    path(
+        "<int:video_id>/extract_dominant_colours/",
+        videos.extract_dominant_colours,
+        name="extract_dominant_colours",
+    ),
+    path(
+        "<int:video_id>/extract_dominant_colours/response/",
+        videos.extract_dominant_colours_response,
+        name="extract_dominant_colours_response",
+    ),
     re_path(r'^(\d+)/delete/$', videos.delete, name='delete'),
     re_path(r'^(\d+)/create_transcode/$', videos.create_transcode, name='create_transcode'),
     re_path(r'^(\d+)/delete_transcode/(\d+)$', videos.delete_transcode, name='delete_transcode'),

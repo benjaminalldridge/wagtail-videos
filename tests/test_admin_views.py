@@ -248,6 +248,19 @@ class TestVideoEditView(TestCase, WagtailTestUtils):
         # Ensure the form supports file uploads
         self.assertContains(response, 'enctype="multipart/form-data"')
 
+    @patch.object(Video, "extract_dominant_colours", return_value=[])
+    def test_extract_dominant_colours_redirects_to_edit(self, extract_colours):
+        response = self.client.post(
+            reverse("wagtailvideos:extract_dominant_colours", args=(self.video.id,))
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("wagtailvideos:edit", args=(self.video.id,)),
+            fetch_redirect_response=False,
+        )
+        extract_colours.assert_called_once_with(count=3)
+
     def test_usage_count(self):
         response = self.get()
         self.assertEqual(response.status_code, 200)

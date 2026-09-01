@@ -1,27 +1,26 @@
-"""Use various well-known translations to get the dominant colours in an input video.
+"""Extract and persist a thumbnail-derived palette for a video.
 
-The sampled colours are persisted to storage in their various (pre-calculated) values 
-rather than running the calculation on-demand repeatedly.
+Each sampled colour has one source-aligned record for each harmony. The video
+admin template and chooser both render one three-tile row per harmony.
 """
 
 import colorsys
 from PIL import Image, UnidentifiedImageError
 
-# Define the boundaries for our calculations, ensure we don't undersample or sample junk
-DEFAULT_COUNT = 3 # Number of swatches to return
-CANDIDATE_COUNT = 24 # Number of candidates to quantize against, oversample for safety
-MIN_USABLE_LUMA = 0.30 # Limit minimum luma so darks don't pollute results
-MAX_USABLE_LUMA = 0.95 # Limit max luma so whites don't pullute
+# Palette policy: return three swatches after excluding unusable dark and light values.
+DEFAULT_COUNT = 3
+CANDIDATE_COUNT = 24
+MIN_USABLE_LUMA = 0.30
+MAX_USABLE_LUMA = 0.95
 
 
-# Conventional harmony relationships, producing a three-swatch row of results each
+# Conventional harmony relationships aligned with source swatch index 0, 1, and 2.
 HARMONY_ROTATIONS = {
-    "analogous": (-30, 0, 30), # Analogous is hue +/- 30 degrees
-    "complement": (180, 180, 180), # Complementart is hue + 180 degrees
-    "triad": (0, 120, 240), # Triad is hue + 0/120/240 degrees
+    "analogous": (-30, 0, 30),
+    "complement": (180, 180, 180),
+    "triad": (0, 120, 240),
 }
 
-# Do the actual processing, takes in a video object and a count of swatches to return
 def extract(video, count=DEFAULT_COUNT):
     """Extract and return palette records from this video's thumbnail."""
     if not video.thumbnail:
@@ -30,6 +29,7 @@ def extract(video, count=DEFAULT_COUNT):
     return extract_from_file(video.thumbnail, count=count)
 
 def prepare_image(image, sample_size=160):
+    """Flatten one thumbnail into a small RGB image for quantization."""
     image = image.convert("RGB")
     image.thumbnail((sample_size, sample_size))
     return image
@@ -56,7 +56,7 @@ def _rgb_to_luma(rgb):
 def _has_usable_luma(rgb):
     """Validate the luma against our upper and lower bounds."""
     luma = _rgb_to_luma(rgb)
-    return MIN_USABLE_LUMA <= luma(rgb) <= MAX_USABLE_LUMA
+    return MIN_USABLE_LUMA <= luma <= MAX_USABLE_LUMA
 
 def _rotate_hue(rgb, degrees):
     """Rotate input HSV Hue a given angle while preserving Saturation and Value."""
@@ -67,36 +67,50 @@ def _rotate_hue(rgb, degrees):
     rotated = colorsys.hsv_to_rgb(hue, saturation, value)
     return tuple(int(round(channel * 255)) for channel in rotated)
 
+def _add_harmonies(colours):
+    """Attach one matching harmony record to each sampled colour.
+
+    ``colours[0]`` receives the first angle in every harmony tuple, and so on.
+    This matches the three columns rendered by the admin template.
+    """
+
+    for index, colour in enumerate(colours):
+        rgb = tuple(colour["rgb"])
+        colour["harmonies"] = {}
+
+        for name, rotations in HARMONY_ROTATIONS.items():
+            rotation = rotations[index]
+            colour["harmonies"][name] = _format_colour(
+                _rotate_hue(rgb, rotation)
+            )
+
+    return colours
+
 
 def _format_colour(rgb, percentage=None):
     """Build the stable JSON shape shared by admin, chooser, and StreamField."""
-    colour = {
-        "hex": _rgb_to_hex(rgb),
-        "rgb": list(rgb),
-        "hsv": _rgb_to_hsv(rgb),
-        "display": {
-            "hex": _rgb_to_hex(rgb),
-            "rgb": "RGB {0}, {1}, {2}".format(*rgb),
-            "hsv": "HSV {h}deg, {s}%, {v}%".format(**_rgb_to_hsv(rgb)),
-        },
-    }
+    hex_value = _rgb_to_hex(rgb)
+    hsv = _rgb_to_hsv(rgb)
 
-    # Calculate the colour harmonies ahead of time
-    colour["harmonies"] = {
-        name: [
-            _rgb_to_hex(_rotate_hue(rgb, degrees))
-            for degrees in rotations
-        ]
-        for name, rotations in HARMONY_ROTATIONS.items()
+    colour = {
+        "hex": hex_value,
+        "rgb": list(rgb),
+        "hsv": hsv,
+        "display": {
+            "hex": hex_value,
+            "rgb": "RGB({0}, {1}, {2})".format(*rgb),
+            "hsv": "HSV({h}, {s}, {v})".format(**hsv),
+        },
     }
 
     if percentage is not None:
         colour["percentage"] = round(percentage, 4)
+
     return colour
 
 
 def _get_candidates(image, count):
-    """Get a quantized list of candidate swatches to work with"""
+    """Return luma-valid quantized RGB candidates ordered by pixel count."""
     quantized = image.quantize(colors=max(CANDIDATE_COUNT, count * 8))
     palette = quantized.getpalette()
     colour_counts = quantized.getcolors()
@@ -118,13 +132,6 @@ def _get_candidates(image, count):
         reverse=True,
     )
 
-def _load_rgb_image(image, sample_size):
-    """Resize a Pillow image for palette extraction."""
-    image.thumbnail((sample_size, sample_size))
-
-    # Use copy here to ensure the handle is not dropped
-    return image.convert("RGB").copy()
-
 def extract_from_file(image_file, count=DEFAULT_COUNT):
     """Open a Django storage file and extract its palette."""
     image_file.open("rb")
@@ -145,10 +152,12 @@ def extract_from_image(image, count=DEFAULT_COUNT):
         raise RuntimeError("The thumbnail does not contain enough usable colours.")
 
     total = sum(candidate["pixel_count"] for candidate in candidates)
-    return [
+    colours = [
         _format_colour(
             candidate["rgb"],
             percentage=(candidate["pixel_count"] / total) * 100,
         )
         for candidate in candidates[:count]
     ]
+
+    return _add_harmonies(colours)

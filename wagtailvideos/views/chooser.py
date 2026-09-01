@@ -13,6 +13,7 @@ from wagtail.admin.viewsets.chooser import ChooserViewSet
 from wagtailvideos import get_video_model
 from wagtailvideos.forms import get_video_form
 from wagtailvideos.permissions import permission_policy
+from wagtailvideos.widgets import get_chooser_colour_data
 
 permission_checker = PermissionPolicyChecker(permission_policy)
 
@@ -25,6 +26,11 @@ class VideoChosenResponseMixin(ChosenResponseMixin):
             "width": 165,
             "height": 165,
         }
+        response_data["dominant_colours"] = get_chooser_colour_data(video)
+        response_data["extract_colours_url"] = reverse(
+            "wagtailvideos:extract_dominant_colours_response",
+            args=(video.pk,),
+        )
         return response_data
 
 

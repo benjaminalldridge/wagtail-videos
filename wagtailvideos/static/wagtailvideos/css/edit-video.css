@@ -6,3 +6,120 @@
     opacity: 0.8;
     font-weight: bold;
 }
+
+.dominant-colours-section {
+    margin-top: 2em;
+}
+
+.dominant-colours-header {
+    margin-bottom: 1em;
+}
+
+.dominant-colours-header h2 {
+    margin-bottom: 0.5em;
+}
+
+.dominant-colours-header__field {
+    display: block;
+    max-width: 14em;
+    min-width: 10em;
+}
+
+.dominant-colours-header__field span {
+    display: block;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-bottom: 0.25em;
+}
+
+.dominant-colours-header__field select {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+}
+
+.dominant-colours {
+    display: grid;
+    gap: 0.75em;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 0.75em;
+    padding-left: 0;
+}
+
+.dominant-colours--harmony {
+    margin-bottom: 1em;
+}
+
+.dominant-colours li {
+    list-style: none;
+    margin: 0;
+}
+
+.dominant-colours__item {
+    background: transparent;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4em;
+    min-width: 0;
+    padding: 0;
+    position: relative;
+    width: 100%;
+}
+
+.dominant-colours__swatch {
+    appearance: none;
+    background-clip: padding-box;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 0;
+    box-sizing: border-box;
+    cursor: pointer;
+    display: block;
+    height: 4em;
+    min-height: 0;
+    min-width: 0;
+    padding: 0;
+    position: static;
+    width: 100%;
+}
+
+.dominant-colours__swatch:focus {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.dominant-colours__swatch--empty {
+    background:
+        linear-gradient(135deg, transparent 48%, currentColor 49%, currentColor 51%, transparent 52%),
+        rgba(255, 255, 255, 0.04);
+    opacity: 0.45;
+}
+
+.dominant-colours__value {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    box-sizing: border-box;
+    color: inherit;
+    display: block;
+    font-size: 0.85em;
+    line-height: 1.3;
+    margin: 0;
+    min-height: 1.75em;
+    min-width: 0;
+    padding: 0.25em 0;
+    position: static;
+    text-align: left;
+    width: 100%;
+}
+
+@media screen and (max-width: 50em) {
+    .dominant-colours-header__field {
+        max-width: none;
+    }
+
+    .dominant-colours {
+        grid-template-columns: 1fr;
+    }
+}

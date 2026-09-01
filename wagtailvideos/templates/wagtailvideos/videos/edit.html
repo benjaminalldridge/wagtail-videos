@@ -8,6 +8,11 @@
 {{ block.super }}
 <link rel="stylesheet" href="{% static 'wagtailvideos/css/edit-video.css' %}" type="text/css" /> {% endblock %}
 
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'wagtailvideos/js/dominant-colours.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 {% trans "Editing" as editing_str %}
 
@@ -139,6 +144,98 @@
                 <a class="button" href="{{ tracks_action_url }}">{% trans "Add tracks" %}</a>
                 {% endif %}
         {% endif %}
+        <section class="dominant-colours-section">
+                <div class="dominant-colours-header">
+                    <h2 class="u-text-transform-uppercase">{% trans "Dominant colours" %}</h2>
+                    {% if video.dominant_colours %}
+                        <label class="dominant-colours-header__field">
+                            <span>{% trans "Palette" %}</span>
+                            <select data-colour-harmony-select>
+                                <option value="">{% trans "Select harmony" %}</option>
+                                <option value="analogous">{% trans "Analogous" %}</option>
+                                <option value="complement">{% trans "Complement" %}</option>
+                                <option value="triad">{% trans "Triad" %}</option>
+                            </select>
+                        </label>
+                    {% endif %}
+                </div>
+                {% if video.dominant_colours %}
+                    <ul class="dominant-colours dominant-colours--sampled">
+                        {% for colour in video.dominant_colours|slice:":3" %}
+                            {% firstof colour.display.hex colour.hex as hex_value %}
+                            <li>
+                                <div
+                                    class="dominant-colours__item"
+                                    data-colour-hex="{{ hex_value }}"
+                                    data-colour-rgb="{{ colour.display.rgb|default:'' }}"
+                                    data-colour-hsv="{{ colour.display.hsv|default:'' }}"
+                                >
+                                    <button
+                                        class="dominant-colours__swatch"
+                                        type="button"
+                                        style="background: {{ colour.hex }};"
+                                        data-colour-cycle-trigger
+                                        aria-label="{% blocktrans with colour=hex_value %}Cycle colour value format from {{ colour }}{% endblocktrans %}"
+                                    ></button>
+                                    <input
+                                        class="dominant-colours__value"
+                                        type="text"
+                                        value="{{ hex_value }}"
+                                        readonly
+                                        data-colour-cycle-label
+                                        aria-label="{% blocktrans with colour=hex_value %}Colour value {{ colour }}{% endblocktrans %}"
+                                    />
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <ul class="dominant-colours dominant-colours--harmony">
+                        {% for colour in video.dominant_colours|slice:":3" %}
+                            {% firstof colour.display.hex colour.hex as hex_value %}
+                            <li>
+                                <div
+                                    class="dominant-colours__item"
+                                    data-colour-hex="{{ hex_value }}"
+                                    data-colour-rgb="{{ colour.display.rgb|default:'' }}"
+                                    data-colour-hsv="{{ colour.display.hsv|default:'' }}"
+                                    data-colour-analogous-hex="{{ colour.harmonies.analogous.display.hex|default:'' }}"
+                                    data-colour-analogous-rgb="{{ colour.harmonies.analogous.display.rgb|default:'' }}"
+                                    data-colour-analogous-hsv="{{ colour.harmonies.analogous.display.hsv|default:'' }}"
+                                    data-colour-complement-hex="{{ colour.harmonies.complement.display.hex|default:'' }}"
+                                    data-colour-complement-rgb="{{ colour.harmonies.complement.display.rgb|default:'' }}"
+                                    data-colour-complement-hsv="{{ colour.harmonies.complement.display.hsv|default:'' }}"
+                                    data-colour-triad-hex="{{ colour.harmonies.triad.display.hex|default:'' }}"
+                                    data-colour-triad-rgb="{{ colour.harmonies.triad.display.rgb|default:'' }}"
+                                    data-colour-triad-hsv="{{ colour.harmonies.triad.display.hsv|default:'' }}"
+                                >
+                                    <button
+                                        class="dominant-colours__swatch dominant-colours__swatch--empty"
+                                        type="button"
+                                        data-colour-cycle-trigger
+                                        aria-label="{% trans 'Cycle harmony colour value format' %}"
+                                    ></button>
+                                    <input
+                                        class="dominant-colours__value"
+                                        type="text"
+                                        value=""
+                                        readonly
+                                        data-colour-cycle-label
+                                        aria-label="{% trans 'Harmony colour value' %}"
+                                    />
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <form action="{% url 'wagtailvideos:extract_dominant_colours' video.id %}" method="POST">
+                    {% csrf_token %}
+                    <input
+                        class="button button-secondary"
+                        type="submit"
+                        value="{% trans 'Extract dominant colours' %}"
+                    />
+                </form>
+            </section>
         </div>
     </div>
 </div>
