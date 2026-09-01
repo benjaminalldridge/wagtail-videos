@@ -23,7 +23,7 @@ def get_chooser_colour_data(video):
     those rows, so this function transposes that storage shape into one list per row.
     """
     # Limit old or manually edited JSON to the three positions the UI supports.
-    # We ignore invalid entires so a partial/historic value can't break editing
+    # We ignore invalid entries so a partial/historic value can't break editing
     colours = [
         colour
         for colour in (video.dominant_colours or [])[:3]
@@ -47,6 +47,7 @@ def get_chooser_colour_data(video):
         "sampled": colours,
         "harmonies": harmonies,
     }
+
 
 class AdminVideoChooser(BaseChooser):
     """A video chooser that carries preview as well as persisted palette data."""
@@ -110,6 +111,7 @@ class AdminVideoChooser(BaseChooser):
             ]
         )
 
+
 class VideoChooserAdapter(BaseChooserAdapter):
     """Register the video chooser for Wagtail's Telepath StreamField runtime."""
 
@@ -124,5 +126,6 @@ class VideoChooserAdapter(BaseChooserAdapter):
                 versioned_static("wagtailvideos/js/video-chooser-telepath.js"),
             ]
         )
+
 
 register(VideoChooserAdapter(), AdminVideoChooser)

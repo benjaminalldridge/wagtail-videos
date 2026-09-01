@@ -1,16 +1,16 @@
-from django.db import models
 from django.core.validators import RegexValidator
+from django.db import models
 from modelcluster.fields import ParentalKey
 from wagtail.admin.panels import FieldPanel
 from wagtail.fields import StreamField
 from wagtail.models import Page
 
+from tests.app.widgets import PageBackgroundColourWidget
 from wagtailvideos.blocks import VideoChooserBlock
 from wagtailvideos.edit_handlers import VideoChooserPanel
 from wagtailvideos.models import (
     AbstractTrackListing, AbstractVideo, AbstractVideoTrack,
     AbstractVideoTranscode)
-from tests.app.widgets import PageBackgroundColourWidget
 
 
 class CustomVideoModel(AbstractVideo):
@@ -77,5 +77,5 @@ class TestPage(Page):
     content_panels = Page.content_panels + [
         VideoChooserPanel("video_field"),
         FieldPanel("video_streamfield"),
-        FieldPanel("page_background_colour", widget=PageBackgroundColourWidget), # Register the actual panel
+        FieldPanel("page_background_colour", widget=PageBackgroundColourWidget),  # Register the actual panel
     ]

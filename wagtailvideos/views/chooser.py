@@ -159,6 +159,7 @@ class VideoChooserViewSet(ChooserViewSet):
     choose_results_view_class = VideoChooseResultsView
     chosen_view_class = VideoChosenView
     create_view_class = VideoUploadView
+    permission_policy = permission_policy
     register_widget = False
 
     icon = "media"

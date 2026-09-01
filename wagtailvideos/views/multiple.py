@@ -131,6 +131,7 @@ class CreateFromUploadedVideoView(BaseCreateFromUploadView):
     def get_edit_form_class(self):
         return get_video_edit_form(self.model)
 
+
 class DeleteUploadView(BaseDeleteUploadView):
     upload_pk_url_kwarg = "uploaded_file_id"
 

@@ -353,6 +353,17 @@ class TestVideoEditView(TestCase, WagtailTestUtils):
         self.assertEqual(response.status_code, 200)
         extract_colours.assert_called_once_with(count=3)
 
+    @patch.object(Video, "extract_dominant_colours", return_value=[])
+    def test_thumbnail_update_refreshes_dominant_colours(self, extract_colours):
+        """A manually changed thumbnail becomes the new palette source."""
+        self.video.thumbnail = SimpleUploadedFile(
+            "replacement.jpg", b"replacement thumbnail", "image/jpeg"
+        )
+
+        self.video.save(update_fields=["thumbnail"])
+
+        extract_colours.assert_called_once_with(count=3)
+
     def test_with_missing_video_file(self):
         self.video.file.delete(False)
 

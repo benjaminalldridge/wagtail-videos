@@ -67,7 +67,7 @@ class AbstractVideo(CollectionMember, index.Indexed, models.Model):
     width = models.IntegerField(verbose_name=_("width"), editable=False, null=True)
     height = models.IntegerField(verbose_name=_("height"), editable=False, null=True)
 
-    # Derived thumbnail metadata, stored here so as to not break admin editable fields 
+    # Derived thumbnail metadata, stored here so as to not break admin editable fields
     dominant_colours = models.JSONField(
         default=list,
         blank=True,

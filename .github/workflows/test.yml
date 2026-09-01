@@ -76,4 +76,4 @@ jobs:
         run: flake8 wagtailvideos/ tests/
       
       - name: Run isort
-        run: isort --recursive --diff --check-only wagtailvideos/ tests/
+        run: isort --diff --check-only wagtailvideos/ tests/

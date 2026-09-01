@@ -6,6 +6,7 @@ of hue harmonies based on different visual models (eg. Analogous or Complementar
 """
 
 import colorsys
+
 from PIL import Image, UnidentifiedImageError
 
 # Provide 3 return swatches after excluding unusable dark and light values
@@ -23,6 +24,7 @@ HARMONY_ROTATIONS = {
     "triad": (0, 120, 240),
 }
 
+
 def extract(video, count=DEFAULT_COUNT):
     """Extract and return palette records from this video's thumbnail."""
     # Thumbnail extraction is the logical place for this until extended to support ffmpeg
@@ -30,6 +32,7 @@ def extract(video, count=DEFAULT_COUNT):
         raise RuntimeError("The input video has no thumbnail available to sample.")
 
     return extract_from_file(video.thumbnail, count=count)
+
 
 def prepare_image(image, sample_size=160):
     """Flatten a thumbnail into a small RGB image for quantization so we can work efficiently."""
@@ -39,9 +42,11 @@ def prepare_image(image, sample_size=160):
     image.thumbnail((sample_size, sample_size))
     return image
 
+
 def _rgb_to_hex(rgb):
     """Translate RGB values into the equivalent hex (#aabbcc) format."""
     return "#{:02x}{:02x}{:02x}".format(*rgb)
+
 
 def _rgb_to_hsv(rgb):
     """Convert standard RGB to its HSV representation."""
@@ -49,10 +54,11 @@ def _rgb_to_hsv(rgb):
     red, green, blue = (channel / 255 for channel in rgb)
     hue, saturation, value = colorsys.rgb_to_hsv(red, green, blue)
     return {
-        "h": int(round(hue * 360)) % 360, # degrees hue
-        "s": int(round(saturation * 100)), # percentage saturation
-        "v": int(round(value * 100)), # percentage value
+        "h": int(round(hue * 360)) % 360,  # degrees hue
+        "s": int(round(saturation * 100)),  # percentage saturation
+        "v": int(round(value * 100)),  # percentage value
     }
+
 
 def _rgb_to_luma(rgb):
     """Return normalised RGB values (0..1) using Rec.709 conversion factors."""
@@ -61,11 +67,13 @@ def _rgb_to_luma(rgb):
     red, green, blue = (channel / 255 for channel in rgb)
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
+
 def _has_usable_luma(rgb):
     """Validate the luma against our upper and lower bounds."""
     luma = _rgb_to_luma(rgb)
     # Very dark and very light values are not useful for our purposes
     return MIN_USABLE_LUMA <= luma <= MAX_USABLE_LUMA
+
 
 def _rotate_hue(rgb, degrees):
     """Rotate an input HSV Hue a given angle while preserving Saturation and Value."""
@@ -76,6 +84,7 @@ def _rotate_hue(rgb, degrees):
     hue = (hue + hue_rotation) % 1
     rotated = colorsys.hsv_to_rgb(hue, saturation, value)
     return tuple(int(round(channel * 255)) for channel in rotated)
+
 
 def _add_harmonies(colours):
     """Attach one matching harmony record to each sampled colour.
@@ -134,7 +143,7 @@ def _get_candidates(image, count):
     for pixel_count, palette_index in colour_counts:
         # Pillow stores RGB swatch palette entries consecutively, using three values per colour
         offset = palette_index * 3
-        rgb = tuple(palette[offset : offset + 3])
+        rgb = tuple(palette[offset:offset + 3])
 
         # Have we got enough luma for the provided swatch? If so, persist it
         if _has_usable_luma(rgb):
@@ -150,6 +159,7 @@ def _get_candidates(image, count):
         key=lambda candidate: candidate["pixel_count"],
         reverse=True,
     )
+
 
 def extract_from_file(image_file, count=DEFAULT_COUNT):
     """Open a Django storage file and extract its palette."""

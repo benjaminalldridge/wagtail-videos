@@ -8,7 +8,6 @@ from django.db.models.signals import post_delete, post_save
 
 from wagtailvideos import get_transcoder_backend, get_video_model
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -100,8 +99,10 @@ def video_post_save(instance, created, **kwargs):
         return
 
     update_fields = kwargs.get("update_fields")
-    if update_fields is not None and "file" not in update_fields:
-        # JSON palette saves and other narrow updates do not require metadata work.
+    if update_fields is not None and not {"file", "thumbnail"}.intersection(
+        update_fields
+    ):
+        # JSON palette saves and other narrow updates do not require metadata work
         return
 
     if not instance.file:
