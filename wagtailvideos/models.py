@@ -67,6 +67,12 @@ class AbstractVideo(CollectionMember, index.Indexed, models.Model):
     width = models.IntegerField(verbose_name=_("width"), editable=False, null=True)
     height = models.IntegerField(verbose_name=_("height"), editable=False, null=True)
 
+    dominant_colours = models.JSONField(
+        default=list,
+        blank=True,
+        editable=False,
+    )
+
     objects = VideoQuerySet.as_manager()
 
     search_fields = list(CollectionMember.search_fields) + [
@@ -219,6 +225,14 @@ class AbstractVideo(CollectionMember, index.Indexed, models.Model):
             backend.do_transcode(transcode)
         else:
             pass  # TODO Queue?
+
+    def extract_dominant_colours(self, count=3):
+        from wagtailvideos.colours import extract
+
+        colours = extract(self, count=count)
+        self.dominant_colours = colours
+        self.save(update_fields=["dominant_colours"])
+        return colours
 
     class Meta:
         abstract = True
