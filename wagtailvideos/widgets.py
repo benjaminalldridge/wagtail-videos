@@ -1,11 +1,13 @@
+"""Wagtail chooser widgets and their serialised dominant-colour state."""
+
 import json
 
 from django import forms
+from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from wagtail.admin.staticfiles import versioned_static
 from wagtail.admin.widgets import BaseChooser, BaseChooserAdapter
-from django.urls import reverse
 
 try:
     from wagtail.admin.telepath import register
@@ -14,8 +16,13 @@ except ImportError:
 
 from wagtailvideos import get_video_model
 
+
 def get_chooser_colour_data(video):
-    """Get the colours that were previously extracted for use here"""
+    """Return the compact palette shape consumed by chooser JavaScript.
+
+    The model stores harmonies beside each source colour. The client renders
+    rows, so this function transposes that storage shape into one list per row.
+    """
     colours = list(video.dominant_colours or [])[:3]
 
     return {
@@ -28,6 +35,8 @@ def get_chooser_colour_data(video):
     }
 
 class AdminVideoChooser(BaseChooser):
+    """A video chooser that carries preview and persisted palette data."""
+
     choose_one_text = _('Choose a video')
     template_name = "wagtailvideos/widgets/video_chooser.html"
     chooser_modal_url_name = "wagtailvideos_chooser:choose"
@@ -39,6 +48,7 @@ class AdminVideoChooser(BaseChooser):
         self.model = get_video_model()
 
     def get_value_data_from_instance(self, instance):
+        """Add video-specific preview and palette values to chooser state."""
         data = super().get_value_data_from_instance(instance)
         data["preview"] = {
             "url": instance.thumbnail.url if instance.thumbnail else "",
@@ -53,6 +63,7 @@ class AdminVideoChooser(BaseChooser):
         return data
 
     def get_context(self, name, value_data, attrs):
+        """Provide empty palette rows when the chooser has no selected video."""
         context = super().get_context(name, value_data, attrs)
         context["preview"] = value_data.get("preview", {})
         context["dominant_colours"] = value_data.get(
@@ -70,10 +81,12 @@ class AdminVideoChooser(BaseChooser):
         return context
 
     def render_js_init(self, id_, name, value_data):
+        """Construct the video-specific chooser subclass for legacy widgets."""
         return "new VideoChooser({0});".format(json.dumps(id_))
 
     @property
     def media(self):
+        """Load the image chooser base class before the video extension."""
         return forms.Media(
             js=[
                 versioned_static("wagtailimages/js/image-chooser-modal.js"),
@@ -83,10 +96,13 @@ class AdminVideoChooser(BaseChooser):
         )
 
 class VideoChooserAdapter(BaseChooserAdapter):
+    """Register the video chooser for Wagtail's Telepath StreamField runtime."""
+
     js_constructor = "wagtailvideos.widgets.VideoChooser"
 
     @cached_property
     def media(self):
+        """Load the Telepath base adapter before its video subclass."""
         return forms.Media(
             js=[
                 versioned_static("wagtailimages/js/image-chooser-telepath.js"),

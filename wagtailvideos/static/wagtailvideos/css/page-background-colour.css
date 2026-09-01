@@ -1,0 +1,54 @@
+/* The page field is a normal text input; these are optional palette shortcuts. */
+.page-background-colour__choices {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.page-background-colour__video {
+    border-top: 1px solid var(--w-color-border-field-default, #626262);
+    display: grid;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+}
+
+.page-background-colour__video-title {
+    font-size: 1rem;
+    margin: 0;
+}
+
+.page-background-colour__palette-control {
+    align-items: center;
+    display: flex;
+    font-weight: 700;
+    gap: 0.5rem;
+}
+
+.page-background-colour__palette-control select {
+    min-width: 10rem;
+}
+
+.page-background-colour__group {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.page-background-colour__swatch {
+    align-items: end;
+    border: 1px solid var(--w-color-border-field-default);
+    color: var(--w-color-text-inverse);
+    display: inline-flex;
+    font: inherit;
+    height: 3rem;
+    justify-content: center;
+    min-width: 6.5rem;
+    padding: 0.25rem;
+    text-shadow: 0 1px 2px #000;
+}
+
+.page-background-colour__swatch:focus-visible {
+    outline: 3px solid var(--w-color-focus);
+    outline-offset: 2px;
+}

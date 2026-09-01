@@ -19,7 +19,10 @@ permission_checker = PermissionPolicyChecker(permission_policy)
 
 
 class VideoChosenResponseMixin(ChosenResponseMixin):
+    """Include thumbnail palette data in the modal chooser response."""
+
     def get_chosen_response_data(self, video):
+        """Send enough state for a newly selected video to render its palette."""
         response_data = super().get_chosen_response_data(video)
         response_data["preview"] = {
             "url": video.thumbnail.url if video.thumbnail else "",

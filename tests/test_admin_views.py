@@ -110,6 +110,40 @@ class TestVideoAddView(TestCase, WagtailTestUtils):
         root_collection = Collection.get_first_root_node()
         self.assertEqual(video.collection, root_collection)
 
+    @patch.object(Video, "extract_dominant_colours", return_value=[])
+    def test_add_extracts_dominant_colours(self, extract_colours):
+        """A completed upload extracts its thumbnail palette automatically."""
+        response = self.post(
+            {
+                "title": "Palette video",
+                "file": SimpleUploadedFile(
+                    "small.mp4", create_test_video_file().read(), "video/mp4"
+                ),
+            }
+        )
+
+        self.assertRedirects(response, reverse("wagtailvideos:index"))
+        extract_colours.assert_called_once_with(count=3)
+
+    @patch.object(
+        Video,
+        "extract_dominant_colours",
+        side_effect=RuntimeError("The thumbnail does not contain enough usable colours."),
+    )
+    def test_add_succeeds_when_dominant_colour_extraction_fails(self, extract_colours):
+        """Palette extraction must not invalidate an otherwise usable upload."""
+        response = self.post(
+            {
+                "title": "No palette video",
+                "file": SimpleUploadedFile(
+                    "small.mp4", create_test_video_file().read(), "video/mp4"
+                ),
+            }
+        )
+
+        self.assertRedirects(response, reverse("wagtailvideos:index"))
+        extract_colours.assert_called_once_with(count=3)
+
     @patch("wagtailvideos.transcoders.ffmpeg.ffmpeg.installed")
     def test_add_no_ffmpeg(self, ffmpeg_installed):
         ffmpeg_installed.return_value = False

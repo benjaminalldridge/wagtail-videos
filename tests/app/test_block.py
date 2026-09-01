@@ -39,3 +39,22 @@ class TestVideoBlock(WagtailPageTests):
         response = self.client.get(page.full_url)
 
         self.assertContains(response, self.video.video_tag(attrs={"controls": True}))
+
+    def test_page_background_colour_is_rendered(self):
+        """A page persists its chosen background rather than deriving it at render time."""
+        page = self.root_page.add_child(instance=TestPage(
+            title="Coloured page",
+            slug="coloured-page",
+            page_background_colour="#336699",
+        ))
+        Site.objects.create(
+            hostname="example.com",
+            port=80,
+            root_page=page,
+            site_name="Example site",
+            is_default_site=True,
+        )
+
+        response = self.client.get(page.full_url)
+
+        self.assertContains(response, 'style="background-color: #336699"')

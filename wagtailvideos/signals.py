@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import contextmanager
 
@@ -6,6 +7,9 @@ from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 
 from wagtailvideos import get_transcoder_backend, get_video_model
+
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -39,19 +43,59 @@ def post_delete_file_cleanup(instance, **kwargs):
         transaction.on_commit(lambda: instance.thumbnail.delete(False))
 
 
-# Fields that need the actual video file to create using the transcoding backend.
-def video_post_save(instance, **kwargs):
+def _extract_dominant_colours(video):
+    """Populate a palette when the upload pipeline produced a usable thumbnail.
+
+    Extraction is supplementary metadata. A thumbnail that cannot provide three
+    luma-valid colours must leave the uploaded video usable, so failures are
+    recorded for operators instead of being raised into the upload response.
+    """
+    if not video.thumbnail:
+        return
+
+    try:
+        video.extract_dominant_colours(count=3)
+    except RuntimeError as error:
+        logger.warning(
+            "Could not extract dominant colours for video %s: %s",
+            video.pk,
+            error,
+        )
+
+
+def video_post_save(instance, created, **kwargs):
+    """Complete metadata and palette generation after a video file is saved.
+
+    All Wagtail upload surfaces save the video model, so this receiver provides
+    one lifecycle hook for ordinary, chooser, and multiple uploads. Palette
+    extraction occurs only at creation; later model saves must not unexpectedly
+    replace an editor's deliberately refreshed palette.
+    """
+    if hasattr(instance, "_from_signal"):
+        return
+
+    update_fields = kwargs.get("update_fields")
+    if update_fields is not None and "file" not in update_fields:
+        return
+
+    if not instance.file:
+        return
+
     backend = get_transcoder_backend()
-    if not backend.installed():
-        return
-    if hasattr(instance, '_from_signal'):
-        # Sender was us, don't run post save
-        return
-    backend.update_video_metadata(instance)
-    instance.file_size = instance.file.size
+
+    # The transcoder creates the default thumbnail. A manually supplied
+    # thumbnail still works when the optional backend is not installed.
     instance._from_signal = True
-    instance.save()
-    del instance._from_signal
+    try:
+        if backend.installed():
+            backend.update_video_metadata(instance)
+
+        instance.file_size = instance.file.size
+        if created:
+            _extract_dominant_colours(instance)
+        instance.save()
+    finally:
+        del instance._from_signal
 
 
 def register_signal_handlers():

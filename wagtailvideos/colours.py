@@ -14,7 +14,9 @@ MIN_USABLE_LUMA = 0.30
 MAX_USABLE_LUMA = 0.95
 
 
-# Conventional harmony relationships aligned with source swatch index 0, 1, and 2.
+# Conventional HSV hue rotations, aligned with source swatch index 0, 1, and 2.
+# The RGB luma coefficients below are Rec. 709 / WCAG relative-luminance values:
+# https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
 HARMONY_ROTATIONS = {
     "analogous": (-30, 0, 30),
     "complement": (180, 180, 180),
@@ -49,7 +51,7 @@ def _rgb_to_hsv(rgb):
     }
 
 def _rgb_to_luma(rgb):
-    """Use RGB->Rec.709 luma conversion as it makes the most sense for video."""
+    """Return Rec. 709 luma, using RGB channels normalised to the 0..1 range."""
     red, green, blue = (channel / 255 for channel in rgb)
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue
 

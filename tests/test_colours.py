@@ -6,7 +6,10 @@ from wagtailvideos.colours import extract_from_image
 
 
 class DominantColourExtractionTests(TestCase):
+    """Protect the JSON contract shared by admin, choosers, and page pickers."""
+
     def test_harmonies_are_full_colour_records(self):
+        """Every stored harmony must support the same display formats as a source."""
         image = Image.new("RGB", (30, 10))
         pixels = image.load()
         source_colours = ((110, 129, 128), (160, 125, 105), (109, 146, 96))

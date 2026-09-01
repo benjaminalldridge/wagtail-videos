@@ -192,7 +192,7 @@ def usage(request, video_id):
 @require_POST
 @permission_checker.require("change")
 def extract_dominant_colours(request, video_id):
-    """Run an extraction to find the dominant colours in a video."""
+    """Extract a palette from the edit page and return to that edit page."""
     video = get_object_or_404(get_video_model(), id=video_id)
 
     try:
@@ -207,7 +207,7 @@ def extract_dominant_colours(request, video_id):
 @require_POST
 @permission_checker.require("change")
 def extract_dominant_colours_response(request, video_id):
-    """Get the response for a dominant colour extraction"""
+    """Extract a palette and return chooser-ready JSON for in-place updates."""
     video = get_object_or_404(get_video_model(), id=video_id)
 
     try:

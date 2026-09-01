@@ -14,3 +14,33 @@
         src="{{ preview.url }}"
     />
 {% endblock chosen_icon %}
+
+{% block chosen_state_view %}
+    <div class="chooser__title" data-chooser-title id="{{ attrs.id }}-title">
+        {{ display_title }}
+    </div>
+
+    {# Hidden state lets a page-level picker reuse this video's saved palette. #}
+    <div
+        data-video-palette-source
+        data-video-palette-title="{{ display_title }}"
+        hidden
+    >
+        {% for colour in dominant_colours.sampled %}
+            {% firstof colour.display.hex colour.hex as hex_value %}
+            <button type="button" data-video-palette-value data-palette-group="Sampled" data-colour="{{ hex_value }}"></button>
+        {% endfor %}
+        {% for colour in dominant_colours.harmonies.analogous %}
+            {% firstof colour.display.hex colour.hex as hex_value %}
+            <button type="button" data-video-palette-value data-palette-group="Analogous" data-colour="{{ hex_value }}"></button>
+        {% endfor %}
+        {% for colour in dominant_colours.harmonies.complement %}
+            {% firstof colour.display.hex colour.hex as hex_value %}
+            <button type="button" data-video-palette-value data-palette-group="Complement" data-colour="{{ hex_value }}"></button>
+        {% endfor %}
+        {% for colour in dominant_colours.harmonies.triad %}
+            {% firstof colour.display.hex colour.hex as hex_value %}
+            <button type="button" data-video-palette-value data-palette-group="Triad" data-colour="{{ hex_value }}"></button>
+        {% endfor %}
+    </div>
+{% endblock chosen_state_view %}

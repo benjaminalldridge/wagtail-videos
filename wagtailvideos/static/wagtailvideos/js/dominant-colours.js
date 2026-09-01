@@ -1,3 +1,4 @@
+/* Drive the saved-video palette: format cycling and selectable harmony rows. */
 (function () {
     var VALUE_FORMATS = ["hex", "rgb", "hsv"];
 
@@ -44,6 +45,8 @@
     }
 
     function colourValues(item, harmonyMode) {
+        // HTML data attributes are the serialised palette boundary. Keeping
+        // formatting here avoids recomputing persisted harmonies in the browser.
         var prefix = harmonyMode ? ["colour", harmonyMode] : ["colour"];
         var values = {};
 
@@ -68,6 +71,8 @@
     }
 
     function renderColours() {
+        // Source swatches always remain visible; harmony tiles remain empty
+        // until an editor explicitly chooses the desired relationship.
         var format = VALUE_FORMATS[getFormatIndex() % VALUE_FORMATS.length];
         var harmonyMode = getHarmonyMode();
 
@@ -82,11 +87,14 @@
     }
 
     function cycleFormat() {
+        // One click changes every visible value together, preserving comparison.
         setFormatIndex((getFormatIndex() + 1) % VALUE_FORMATS.length);
         renderColours();
     }
 
     function initialiseDominantColours() {
+        // Wagtail can render this template without a palette, so tolerate an
+        // absent section and leave a useful diagnostic for integration errors.
         var select = document.querySelector("[data-colour-harmony-select]");
         var items = getAllItems();
 
